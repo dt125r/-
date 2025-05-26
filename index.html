@@ -3,101 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <title>タイル分割</title>
-  <style>
-    body { font-family: sans-serif; text-align: center; margin: 20px; }
-    canvas { border: 1px solid #ccc; margin-top: 10px; }
-    .controls { margin-top: 20px; }
-    input[type='number'] { width: 60px; }
-  </style>
 </head>
 <body>
-  <h1>タイル分割</h1>
-  <input type="file" id="fileInput" accept="image/*,.gif">
-  <div id="dropZone" style="border: 2px dashed #888; padding: 20px; margin: 10px auto; width: 80%;">ここに画像をドロップ</div>
-  <div class="controls">
-    <label>横分割数: <input type="number" id="cols" value="4"></label>
-    <label>縦分割数: <input type="number" id="rows" value="4"></label>
-    <label>カスタムサイズ: <input type="number" id="tileSize" value="48"> px</label>
-    <label>出力形式:
-      <select id="format">
-        <option value="png">PNG</option>
-        <option value="jpeg">JPEG</option>
-        <option value="webp">WEBP</option>
-      </select>
-    </label>
-    <button id="splitButton">タイルに分割</button>
-  </div>
-  <canvas id="previewCanvas" width="0" height="0"></canvas>
-  <script>
-    const fileInput = document.getElementById('fileInput');
-    const dropZone = document.getElementById('dropZone');
-    const previewCanvas = document.getElementById('previewCanvas');
-    const ctx = previewCanvas.getContext('2d');
-
-    let image = new Image();
-    let tileSize = 48;
-
-    function loadImage(file) {
-      const reader = new FileReader();
-      reader.onload = function (e) {
-        image.onload = () => {
-          previewCanvas.width = image.width;
-          previewCanvas.height = image.height;
-          ctx.drawImage(image, 0, 0);
-        }
-        image.src = e.target.result;
-      }
-      reader.readAsDataURL(file);
-    }
-
-    fileInput.addEventListener('change', e => loadImage(e.target.files[0]));
-
-    dropZone.addEventListener('dragover', e => {
-      e.preventDefault();
-      dropZone.style.background = '#e0e0e0';
-    });
-    dropZone.addEventListener('dragleave', e => {
-      e.preventDefault();
-      dropZone.style.background = 'white';
-    });
-    dropZone.addEventListener('drop', e => {
-      e.preventDefault();
-      dropZone.style.background = 'white';
-      loadImage(e.dataTransfer.files[0]);
-    });
-
-    document.getElementById('splitButton').addEventListener('click', () => {
-      const cols = parseInt(document.getElementById('cols').value);
-      const rows = parseInt(document.getElementById('rows').value);
-      tileSize = parseInt(document.getElementById('tileSize').value);
-      const format = document.getElementById('format').value;
-      const zip = new JSZip();
-
-      const tileWidth = image.width / cols;
-      const tileHeight = image.height / rows;
-
-      let count = 0;
-      for (let y = 0; y < rows; y++) {
-        for (let x = 0; x < cols; x++) {
-          const tileCanvas = document.createElement('canvas');
-          tileCanvas.width = tileSize;
-          tileCanvas.height = tileSize;
-          const tileCtx = tileCanvas.getContext('2d');
-          tileCtx.drawImage(image, x * tileWidth, y * tileHeight, tileWidth, tileHeight, 0, 0, tileSize, tileSize);
-          const dataUrl = tileCanvas.toDataURL(`image/${format}`);
-          zip.file(`tile_${count}.${format}`, dataUrl.split(',')[1], { base64: true });
-          count++;
-        }
-      }
-
-      zip.generateAsync({ type: "blob" }).then(blob => {
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = "tiles.zip";
-        a.click();
-      });
-    });
-  </script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <h1>テストページ</h1>
+  <p>これはGitHub Pagesのテストです。</p>
+  <button onclick="alert('ボタンは動作しています')">テストボタン</button>
 </body>
 </html>
