@@ -1,12 +1,202 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>タイル分割</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <style>
+    body { font-family: sans-serif; padding: 1em; max-width: 600px; margin: auto; }
+    input, select, button { margin: 0.5em 0; display: block; width: 100%; }
+    #dropZone { border: 2px dashed #888; padding: 20px; text-align: center; margin-top: 1em; }
+    #preview { max-width: 100%; margin-top: 10px; }
+    .row { display: flex; gap: 1em; }
+    .row > * { flex: 1; }
+    .recommend { color: green; font-size: 0.9em; }
+  </style>
 </head>
 <body>
-  <h1>テストページ</h1>
-  <p>これはGitHub Pagesのテストです。</p>
-  <button onclick="alert('ボタンは動作しています')">テストボタン</button>
+  <h2>タイル分割</h2>
+
+  <input type="file" id="fileInput" accept="image/*">
+  <div id="dropZone">ここに画像をドロップ</div>
+  <img id="preview" alt="画像プレビュー" />
+
+  <label>ZIPファイル名（拡張子不要）:
+    <input type="text" id="zipName" placeholder="tiles" value="tiles">
+  </label>
+
+  <label>出力画像形式:
+    <select id="formatSelect">
+      <option value="image/png">PNG</option>
+      <option value="image/jpeg">JPEG</option>
+      <option value="image/webp">WEBP</option>
+    </select>
+  </label>
+
+  <label>出力画像サイズ（px）:
+    <div class="row">
+      <input type="number" id="tileW" value="48" min="1"> ×
+      <input type="number" id="tileH" value="48" min="1">
+    </div>
+  </label>
+
+  <label>分割モード:
+    <select id="mode">
+      <option value="manual">手動（分割数を指定）</option>
+      <option value="auto">自動（タイルサイズで分割）</option>
+    </select>
+  </label>
+
+  <div id="manualInputs">
+    <label>横に何枚（列）: <input type="number" id="cols" value="1" min="1"></label>
+    <label>縦に何枚（行）: <input type="number" id="rows" value="1" min="1"></label>
+  </div>
+
+  <div id="recommendation" class="recommend"></div>
+
+  <label>出力後、サイズを調整（きれいな指定サイズに変換）:
+    <select id="resizeMode">
+      <option value="resize">ON（きれいに調整）</option>
+      <option value="none">OFF（元サイズをそのまま）</option>
+    </select>
+  </label>
+
+  <button onclick="splitImage()">スタート</button>
+
+  <canvas id="canvas" style="display:none;"></canvas>
+
+  <script>
+    const fileInput = document.getElementById('fileInput');
+    const dropZone = document.getElementById('dropZone');
+    const preview = document.getElementById('preview');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    const tileWInput = document.getElementById('tileW');
+    const tileHInput = document.getElementById('tileH');
+    const modeSelect = document.getElementById('mode');
+    const manualInputs = document.getElementById('manualInputs');
+    const formatSelect = document.getElementById('formatSelect');
+    const resizeMode = document.getElementById('resizeMode');
+    const zipNameInput = document.getElementById('zipName');
+    const recommendation = document.getElementById('recommendation');
+
+    let imageBlob = null;
+    let loadedImage = null;
+
+    dropZone.addEventListener('dragover', e => {
+      e.preventDefault();
+      dropZone.style.backgroundColor = '#f0f0f0';
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.style.backgroundColor = '';
+    });
+
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.style.backgroundColor = '';
+      handleFile(e.dataTransfer.files[0]);
+    });
+
+    fileInput.addEventListener('change', e => {
+      handleFile(e.target.files[0]);
+    });
+
+    modeSelect.addEventListener('change', () => {
+      manualInputs.style.display = modeSelect.value === 'manual' ? 'block' : 'none';
+    });
+
+    function handleFile(file) {
+      if (!file.type.startsWith("image/")) return alert("画像ファイルを選んでください");
+
+      imageBlob = file;
+      const reader = new FileReader();
+      reader.onload = e => {
+        preview.src = e.target.result;
+        const img = new Image();
+        img.onload = () => {
+          loadedImage = img;
+          showRecommendations(img.width, img.height);
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function showRecommendations(width, height) {
+      const tw = parseInt(tileWInput.value);
+      const th = parseInt(tileHInput.value);
+      const col = Math.floor(width / tw);
+      const row = Math.floor(height / th);
+      recommendation.textContent = `おすすめ分割数: 横 ${col} 枚 × 縦 ${row} 枚（${tw}×${th} タイル）`;
+    }
+
+    function splitImage() {
+      if (!loadedImage) return alert("画像を選んでください");
+
+      const format = formatSelect.value;
+      const zip = new JSZip();
+      const folder = zip.folder("tiles");
+      const zipName = zipNameInput.value.trim() || "tiles";
+
+      const tileW = parseInt(tileWInput.value);
+      const tileH = parseInt(tileHInput.value);
+
+      let cols, rows;
+
+      if (modeSelect.value === 'auto') {
+        cols = Math.ceil(loadedImage.width / tileW);
+        rows = Math.ceil(loadedImage.height / tileH);
+      } else {
+        cols = parseInt(document.getElementById('cols').value);
+        rows = parseInt(document.getElementById('rows').value);
+      }
+
+      const partW = loadedImage.width / cols;
+      const partH = loadedImage.height / rows;
+
+      let promises = [];
+
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+          const offscreen = document.createElement("canvas");
+          offscreen.width = tileW;
+          offscreen.height = tileH;
+          const octx = offscreen.getContext("2d");
+
+          if (resizeMode.value === 'resize') {
+            // 元の部分を切り出して → 指定サイズにリサイズ
+            const tmp = document.createElement("canvas");
+            tmp.width = partW;
+            tmp.height = partH;
+            tmp.getContext("2d").drawImage(loadedImage, x * partW, y * partH, partW, partH, 0, 0, partW, partH);
+            octx.drawImage(tmp, 0, 0, tileW, tileH);
+          } else {
+            // 等倍切り出し（はみ出しは空白）
+            octx.fillStyle = format === "image/png" ? "rgba(0,0,0,0)" : "#fff";
+            octx.fillRect(0, 0, tileW, tileH);
+            octx.drawImage(loadedImage, x * partW, y * partH, partW, partH, 0, 0, partW, partH);
+          }
+
+          let promise = new Promise(resolve => {
+            offscreen.toBlob(blob => {
+              folder.file(`tile_${y}_${x}.${format.split('/')[1]}`, blob);
+              resolve();
+            }, format);
+          });
+
+          promises.push(promise);
+        }
+      }
+
+      Promise.all(promises).then(() => {
+        zip.generateAsync({ type: "blob" }).then(blob => {
+          saveAs(blob, `${zipName}.zip`);
+        });
+      });
+    }
+  </script>
 </body>
 </html>
