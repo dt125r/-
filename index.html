@@ -4,91 +4,100 @@
   <meta charset="UTF-8">
   <title>タイル分割</title>
   <style>
-    body {
-      font-family: sans-serif;
-      padding: 20px;
-    }
-    #drop-area {
-      border: 2px dashed #ccc;
-      padding: 20px;
-      text-align: center;
-      margin-bottom: 20px;
-    }
-    .preview {
-      max-width: 100%;
-    }
+    body { font-family: sans-serif; text-align: center; margin: 20px; }
+    canvas { border: 1px solid #ccc; margin-top: 10px; }
+    .controls { margin-top: 20px; }
+    input[type='number'] { width: 60px; }
   </style>
 </head>
 <body>
   <h1>タイル分割</h1>
-
-  <div id="drop-area">
-    <p>画像をここにドロップ、またはファイルを選択してください。</p>
-    <input type="file" id="imageInput" accept="image/*">
-    <br><br>
-    <label>横に分割数: <input type="number" id="cols" value="3" min="1"></label>
-    <label>縦に分割数: <input type="number" id="rows" value="3" min="1"></label>
-    <br><br>
-    <button id="startBtn">分割スタート</button>
+  <input type="file" id="fileInput" accept="image/*,.gif">
+  <div id="dropZone" style="border: 2px dashed #888; padding: 20px; margin: 10px auto; width: 80%;">ここに画像をドロップ</div>
+  <div class="controls">
+    <label>横分割数: <input type="number" id="cols" value="4"></label>
+    <label>縦分割数: <input type="number" id="rows" value="4"></label>
+    <label>カスタムサイズ: <input type="number" id="tileSize" value="48"> px</label>
+    <label>出力形式:
+      <select id="format">
+        <option value="png">PNG</option>
+        <option value="jpeg">JPEG</option>
+        <option value="webp">WEBP</option>
+      </select>
+    </label>
+    <button id="splitButton">タイルに分割</button>
   </div>
-
-  <canvas id="canvas" style="display: none;"></canvas>
-  <div id="result"></div>
-
+  <canvas id="previewCanvas" width="0" height="0"></canvas>
   <script>
-    const imageInput = document.getElementById('imageInput');
-    const startBtn = document.getElementById('startBtn');
-    const canvas = document.getElementById('canvas');
-    const resultDiv = document.getElementById('result');
-    let image = new Image();
+    const fileInput = document.getElementById('fileInput');
+    const dropZone = document.getElementById('dropZone');
+    const previewCanvas = document.getElementById('previewCanvas');
+    const ctx = previewCanvas.getContext('2d');
 
-    imageInput.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
+    let image = new Image();
+    let tileSize = 48;
+
+    function loadImage(file) {
       const reader = new FileReader();
-      reader.onload = (event) => {
-        image.src = event.target.result;
-      };
+      reader.onload = function (e) {
+        image.onload = () => {
+          previewCanvas.width = image.width;
+          previewCanvas.height = image.height;
+          ctx.drawImage(image, 0, 0);
+        }
+        image.src = e.target.result;
+      }
       reader.readAsDataURL(file);
+    }
+
+    fileInput.addEventListener('change', e => loadImage(e.target.files[0]));
+
+    dropZone.addEventListener('dragover', e => {
+      e.preventDefault();
+      dropZone.style.background = '#e0e0e0';
+    });
+    dropZone.addEventListener('dragleave', e => {
+      e.preventDefault();
+      dropZone.style.background = 'white';
+    });
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.style.background = 'white';
+      loadImage(e.dataTransfer.files[0]);
     });
 
-    startBtn.addEventListener('click', () => {
+    document.getElementById('splitButton').addEventListener('click', () => {
       const cols = parseInt(document.getElementById('cols').value);
       const rows = parseInt(document.getElementById('rows').value);
-      if (!cols || !rows || !image.src) return alert('画像と分割数を指定してください');
+      tileSize = parseInt(document.getElementById('tileSize').value);
+      const format = document.getElementById('format').value;
+      const zip = new JSZip();
 
-      image.onload = () => {
-        canvas.width = image.width;
-        canvas.height = image.height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(image, 0, 0);
-        const tileWidth = Math.floor(image.width / cols);
-        const tileHeight = Math.floor(image.height / rows);
-        resultDiv.innerHTML = '';
+      const tileWidth = image.width / cols;
+      const tileHeight = image.height / rows;
 
-        for (let y = 0; y < rows; y++) {
-          for (let x = 0; x < cols; x++) {
-            const tileCanvas = document.createElement('canvas');
-            tileCanvas.width = 48;
-            tileCanvas.height = 48;
-            const tileCtx = tileCanvas.getContext('2d');
-            tileCtx.drawImage(
-              canvas,
-              x * tileWidth,
-              y * tileHeight,
-              tileWidth,
-              tileHeight,
-              0, 0, 48, 48
-            );
-            const img = new Image();
-            img.src = tileCanvas.toDataURL();
-            img.className = 'preview';
-            resultDiv.appendChild(img);
-          }
+      let count = 0;
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+          const tileCanvas = document.createElement('canvas');
+          tileCanvas.width = tileSize;
+          tileCanvas.height = tileSize;
+          const tileCtx = tileCanvas.getContext('2d');
+          tileCtx.drawImage(image, x * tileWidth, y * tileHeight, tileWidth, tileHeight, 0, 0, tileSize, tileSize);
+          const dataUrl = tileCanvas.toDataURL(`image/${format}`);
+          zip.file(`tile_${count}.${format}`, dataUrl.split(',')[1], { base64: true });
+          count++;
         }
-      };
-      image.src = image.src; // 再描画トリガー
+      }
+
+      zip.generateAsync({ type: "blob" }).then(blob => {
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "tiles.zip";
+        a.click();
+      });
     });
   </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </body>
 </html>
