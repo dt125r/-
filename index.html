@@ -3,92 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <title>タイル分割</title>
-  <style>
-    body {
-      font-family: sans-serif;
-      padding: 20px;
-    }
-    #drop-area {
-      border: 2px dashed #ccc;
-      padding: 20px;
-      text-align: center;
-      margin-bottom: 20px;
-    }
-    .preview {
-      max-width: 100%;
-    }
-  </style>
 </head>
 <body>
-  <h1>タイル分割</h1>
-
-  <div id="drop-area">
-    <p>画像をここにドロップ、またはファイルを選択してください。</p>
-    <input type="file" id="imageInput" accept="image/*">
-    <br><br>
-    <label>横に分割数: <input type="number" id="cols" value="3" min="1"></label>
-    <label>縦に分割数: <input type="number" id="rows" value="3" min="1"></label>
-    <br><br>
-    <button id="startBtn">分割スタート</button>
-  </div>
-
-  <canvas id="canvas" style="display: none;"></canvas>
-  <div id="result"></div>
-
-  <script>
-    const imageInput = document.getElementById('imageInput');
-    const startBtn = document.getElementById('startBtn');
-    const canvas = document.getElementById('canvas');
-    const resultDiv = document.getElementById('result');
-    let image = new Image();
-
-    imageInput.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        image.src = event.target.result;
-      };
-      reader.readAsDataURL(file);
-    });
-
-    startBtn.addEventListener('click', () => {
-      const cols = parseInt(document.getElementById('cols').value);
-      const rows = parseInt(document.getElementById('rows').value);
-      if (!cols || !rows || !image.src) return alert('画像と分割数を指定してください');
-
-      image.onload = () => {
-        canvas.width = image.width;
-        canvas.height = image.height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(image, 0, 0);
-        const tileWidth = Math.floor(image.width / cols);
-        const tileHeight = Math.floor(image.height / rows);
-        resultDiv.innerHTML = '';
-
-        for (let y = 0; y < rows; y++) {
-          for (let x = 0; x < cols; x++) {
-            const tileCanvas = document.createElement('canvas');
-            tileCanvas.width = 48;
-            tileCanvas.height = 48;
-            const tileCtx = tileCanvas.getContext('2d');
-            tileCtx.drawImage(
-              canvas,
-              x * tileWidth,
-              y * tileHeight,
-              tileWidth,
-              tileHeight,
-              0, 0, 48, 48
-            );
-            const img = new Image();
-            img.src = tileCanvas.toDataURL();
-            img.className = 'preview';
-            resultDiv.appendChild(img);
-          }
-        }
-      };
-      image.src = image.src; // 再描画トリガー
-    });
-  </script>
+  <h1>テストページ</h1>
+  <p>これはGitHub Pagesのテストです。</p>
+  <button onclick="alert('ボタンは動作しています')">テストボタン</button>
 </body>
 </html>
