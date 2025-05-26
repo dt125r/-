@@ -5,6 +5,11 @@
   <title>タイル分割</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+  <!-- ✅ AdSenseのヘッダー用スクリプト（<head>内） -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7708614674033700"
+     crossorigin="anonymous"></script>
+
   <style>
     body { font-family: sans-serif; padding: 1em; max-width: 600px; margin: auto; }
     input, select, button { margin: 0.5em 0; display: block; width: 100%; }
@@ -17,6 +22,17 @@
 </head>
 <body>
   <h2>タイル分割</h2>
+
+  <!-- ✅ 広告表示エリア -->
+  <ins class="adsbygoogle"
+       style="display:block"
+       data-ad-client="ca-pub-7708614674033700"
+       data-ad-slot="4886070523"
+       data-ad-format="auto"
+       data-full-width-responsive="true"></ins>
+  <script>
+       (adsbygoogle = window.adsbygoogle || []).push({});
+  </script>
 
   <input type="file" id="fileInput" accept="image/*">
   <div id="dropZone">ここに画像をドロップ</div>
@@ -167,14 +183,12 @@
           const octx = offscreen.getContext("2d");
 
           if (resizeMode.value === 'resize') {
-            // 元の部分を切り出して → 指定サイズにリサイズ
             const tmp = document.createElement("canvas");
             tmp.width = partW;
             tmp.height = partH;
             tmp.getContext("2d").drawImage(loadedImage, x * partW, y * partH, partW, partH, 0, 0, partW, partH);
             octx.drawImage(tmp, 0, 0, tileW, tileH);
           } else {
-            // 等倍切り出し（はみ出しは空白）
             octx.fillStyle = format === "image/png" ? "rgba(0,0,0,0)" : "#fff";
             octx.fillRect(0, 0, tileW, tileH);
             octx.drawImage(loadedImage, x * partW, y * partH, partW, partH, 0, 0, partW, partH);
@@ -199,19 +213,4 @@
     }
   </script>
 </body>
-
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7708614674033700"
-     crossorigin="anonymous"></script>
-<!-- tile-app-header -->
-<ins class="adsbygoogle"
-     style="display:block"
-     data-ad-client="ca-pub-7708614674033700"
-     data-ad-slot="4886070523"
-     data-ad-format="auto"
-     data-full-width-responsive="true"></ins>
-<script>
-     (adsbygoogle = window.adsbygoogle || []).push({});
-</script>
-  
 </html>
-
